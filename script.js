@@ -15,42 +15,97 @@ window.addEventListener('load', () => {
             this.game = game; // Passed by reference, objects in JS are reference types
             this.collisionX = this.game.width * 0.5;
             this.collisionY = this.game.height * 0.5;
-            this.collisionRadius = 50;
+            this.collisionRadius = 30;
             this.speedX = 0;
             this.speedY = 0;
             this.dx = 0;
             this.dy = 0;
             this.speedModifier = 5;
+            this.spriteWidth = 255;
+            this.spriteHeight = 255;
+            this.width = this.spriteWidth;
+            this.height = this.spriteHeight;
+            //  these two proeprties will defien the top left corner of the sprite image we are currently drawing to represent the player.
+            this.spriteX = this.collisionX - (this.width/2);
+            this.spriteY = this.collisionY - (this.height/2);
+            this.frameX = 0;
+            this.frameY = 0;
+            this.image = document.getElementById('bull');
+
 
         }
 
 
         draw(context) {
+            //  draw player image
+            // context.drawImage(this.image, this.collisionX, this.collisionY);
+            // context.drawImage(this.image, sx, sy, sw, sh, this.collisionX, this.collisionY, this.width, this.height);
 
-            context.beginPath();
-            context.arc(this.collisionX, this.collisionY, this.collisionRadius, 0, Math.PI * 2);
-            context.save();
-            // save method creates a snapshot of the current canvas state, including fillStyle
-            // lineWidth, opacity (globalAlpha) as well as transformations and scaling
-            context.globalAlpha = 0.5;
-            context.fill();
-            // restore method resets canvas settings to what they were before calling save
-            context.restore();
-            context.stroke();
+            context.drawImage(this.image, this.frameX * this.spriteWidth, this.frameY * this.spriteHeight, this.spriteWidth, this.spriteHeight, this.spriteX, this.spriteY, this.width, this.height);
 
-            // save and restore methods allow us to apply specific drawing settings only to
-            // selected shapes, without affecting the rest of our canvas drawings.
+            if (this.game.debug) {
 
-            context.beginPath();
-            context.moveTo(this.collisionX, this.collisionY);
-            context.lineTo(this.game.mouse.x, this.game.mouse.y);
-            // call stroke to actually draw the line
-            context.stroke();
+                context.beginPath();
+                context.arc(this.collisionX, this.collisionY, this.collisionRadius, 0, Math.PI * 2);
+                context.save();
+                // save method creates a snapshot of the current canvas state, including fillStyle
+                // lineWidth, opacity (globalAlpha) as well as transformations and scaling
+                context.globalAlpha = 0.5;
+                context.fill();
+                // restore method resets canvas settings to what they were before calling save
+                context.restore();
+                context.stroke();
+
+                // save and restore methods allow us to apply specific drawing settings only to
+                // selected shapes, without affecting the rest of our canvas drawings.
+
+                context.beginPath();
+                context.moveTo(this.collisionX, this.collisionY);
+                context.lineTo(this.game.mouse.x, this.game.mouse.y);
+                // call stroke to actually draw the line
+                context.stroke();
+
+
+            }
+            
 
 
         }
 
         update() {
+
+
+            // SPRITE ANIMATION
+
+            // calculate the distance between the player and the mouse horizontally and vertically
+
+            this.dx = this.game.mouse.x - this.collisionX;
+            this.dy = this.game.mouse.y - this.collisionY;
+
+
+            // MATH.ATAN2() - returns an angle in radians between the positive x axis and a line
+            // , projected from 0, 0 towards a specific point
+            //  expects dy first and then dx as arguments
+
+            const angle = Math.atan2(this.dy, this.dx);
+        
+            // divide total radians in a circle (6.28) by 8 (total directions) and
+            //  use the resultant figures to determine breakpoints for drawing different
+            // parts of the sprite sheet.
+            
+            if (angle < -2.74 || angle > 2.74) this.frameY = 6;
+            else if (angle < -1.96) this.frameY = 7; 
+            else if (angle < -1.17) this.frameY = 0;
+            else if (angle < -0.39) this.frameY = 1;
+            else if (angle < 0.39) this.frameY = 2;
+            else if (angle < 1.17) this.frameY = 3;
+            else if (angle < 1.96) this.frameY = 4;
+            else if (angle < 2.74) this.frameY = 5;
+            
+            
+            // --------------------------------------------------------------------
+
+            // PLAYER MOVEMENT
 
             // Technique 1
 
@@ -78,6 +133,33 @@ window.addEventListener('load', () => {
             
             this.collisionX += this.speedX * this.speedModifier;
             this.collisionY += this.speedY * this.speedModifier;
+            this.spriteX = this.collisionX - (this.width/2);
+            this.spriteY = this.collisionY - (this.height/2) - 100;
+
+
+            // horizontal boundaries
+
+            if (this.collisionX < (0 + this.collisionRadius)) {
+                this.collisionX = (0 + this.collisionRadius);
+            }
+
+            else if (this.collisionX > this.game.width - this.collisionRadius) {
+                this.collisionX = this.game.width - this.collisionRadius;
+            }
+
+
+            // vertical boundaries
+
+            if (this.collisionY < (0 + this.game.topMargin + this.collisionRadius)){
+                this.collisionY = this.game.topMargin + this.collisionRadius;
+            }
+
+            else if (this.collisionY > (this.game.height - this.collisionRadius)){
+
+                this.collisionY = this.game.height - this.collisionRadius;
+            }
+
+            
 
             // collisions with obstacles
             this.game.obstacles.forEach(obstacle => {
@@ -111,7 +193,7 @@ window.addEventListener('load', () => {
             this.game = game;
             this.collisionX = Math.random() * this.game.width;
             this.collisionY = Math.random() * this.game.height;
-            this.collisionRadius = 60;
+            this.collisionRadius = 40;
             this.image = document.getElementById('obstacles');
             this.spriteWidth = 250;
             this.spriteHeight = 250;
@@ -130,16 +212,21 @@ window.addEventListener('load', () => {
 
             context.drawImage(this.image, (this.frameX*this.spriteWidth), (this.frameY*this.spriteHeight), this.spriteWidth, this.spriteHeight, this.spriteX,
                 this.spriteY, this.width, this.height);
-            context.beginPath();
-            context.arc(this.collisionX, this.collisionY, this.collisionRadius, 0, Math.PI * 2);
-            context.save();
-            // save method creates a snapshot of the current canvas state, including fillStyle
-            // lineWidth, opacity (globalAlpha) as well as transformations and scaling
-            context.globalAlpha = 0.5;
-            context.fill();
-            // restore method resets canvas settings to what they were before calling save
-            context.restore();
-            context.stroke();
+
+            if (this.game.debug){
+                context.beginPath();
+                context.arc(this.collisionX, this.collisionY, this.collisionRadius, 0, Math.PI * 2);
+                context.save();
+                // save method creates a snapshot of the current canvas state, including fillStyle
+                // lineWidth, opacity (globalAlpha) as well as transformations and scaling
+                context.globalAlpha = 0.5;
+                context.fill();
+                // restore method resets canvas settings to what they were before calling save
+                context.restore();
+                context.stroke();
+
+            }
+            
         }
     }
 
@@ -151,6 +238,7 @@ window.addEventListener('load', () => {
             this.width = this.canvas.width;
             this.height = this.canvas.height;
             this.topMargin = 260;
+            this.debug = true;
             this.player = new Player(this); // this keyword refers to the entire object
             this.numberOfObstacles = 10;
             this.obstacles = [];
@@ -199,10 +287,18 @@ window.addEventListener('load', () => {
                     this.mouse.x = e.offsetX;
                     this.mouse.y = e.offsetY;
                 }
+
+           
                
                 
 
             });
+
+            window.addEventListener('keydown', (e) => {
+
+                if(e.key == 'd') this.debug = !this.debug;
+                
+            })
 
         }
 
@@ -247,7 +343,7 @@ window.addEventListener('load', () => {
                         overlap = true;
                     }
                 });
-                const margin = testObstacle.collisionRadius * 2;
+                const margin = testObstacle.collisionRadius * 3;
                 if (!overlap && testObstacle.spriteX>0 && 
                     (testObstacle.spriteX<(this.width-testObstacle.width)) &&
                     testObstacle.collisionY > (this.topMargin + margin) &&

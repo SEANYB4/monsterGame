@@ -88,7 +88,13 @@ window.addEventListener('load', () => {
 
                 let [collision, distance, sumOfRadii, dx, dy] = this.game.checkCollision(this, obstacle);
                 if (collision) {
-                    console.log("Collision!");
+                    
+
+                    //  SIMPLE PHYSICS
+                    const unit_x = dx / distance;
+                    const unit_y = dy / distance;
+                    this.collisionX = obstacle.collisionX + (sumOfRadii + 1) * unit_x;
+                    this.collisionY = obstacle.collisionY + (sumOfRadii+ 1) * unit_y;
 
                 }
                 

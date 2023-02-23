@@ -9,6 +9,9 @@ window.addEventListener('load', () => {
     ctx.fillStyle = 'white';
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'white';
+    //  font is a part of canvas state, and frequent changes to canvas state can effect performance
+
+    ctx.font = '40px Helvetica';
 
     class Player {
         constructor(game){
@@ -255,6 +258,9 @@ window.addEventListener('load', () => {
             this.height = this.spriteHeight;
             this.spriteX = this.collisionX - (this.width /2);
             this.spriteY = this.collisionY - (this.height/2) - 30;
+            this.hatchTimer = 0;
+            this.hatchInterval = 5000;
+            this.markedForDeletion = false;
             
         }
 
@@ -271,10 +277,15 @@ window.addEventListener('load', () => {
                 context.fill();
                 context.restore();
                 context.stroke();
+                context.fillText(this.hatchTimer, this.collisionX, this.collisionY);
             }
         }
 
-        update() {
+        update(deltaTime) {
+            this.spriteX = this.collisionX - (this.width /2);
+            this.spriteY = this.collisionY - (this.height/2) - 30;
+
+            // COLLISIONS
             // spread operator allows us to quickly expand elements in an array into another array
             let collisionObjects = [this.game.player, ...this.game.obstacles, ...this.game.enemies];
 
@@ -290,9 +301,50 @@ window.addEventListener('load', () => {
 
             })
 
-            this.spriteX = this.collisionX - (this.width /2);
-            this.spriteY = this.collisionY - (this.height/2) - 30;
 
+            // HATCHING
+            
+            if(this.hatchTimer > this.hatchInterval) {
+
+                this.markedForDeletion = true;
+                this.game.removeGameObjects()
+            } else {
+                this.hatchTimer += deltaTime
+            }
+
+        }
+    }
+
+
+    class Larva {
+
+
+        constructor(game, x, y) {
+
+            this.game = game;
+            this.collisionX = x;
+            this.collisionY = y;
+            this.collisionRadius = 30;
+            this.image = document.getElementById('larva');
+            this.spriteWidth = 150;
+            this.spriteHeight = 150;
+            this.width = this.spriteWidth;
+            this.height = this.spriteHeight;
+            this.spriteX;
+            this.spriteY;
+            this.speedY = 1 + Math.random();
+
+        }
+
+        draw(context) {
+            context.drawImage(this.image, this.spriteX, this.spriteY)
+        }
+
+        update() {
+
+            this.collisionY -= this.speedY;
+            this.spriteX = this.collisionX - (this.width/2);
+            this.spriteY = this.collisionY - (this.height/2);
         }
     }
 
@@ -446,6 +498,17 @@ window.addEventListener('load', () => {
 
         }
 
+        removeGameObjects() {
+
+
+            this.eggs = this.eggs.filter((egg) => {
+
+                if (!egg.markedForDeletion) {
+                    return true
+                }
+            })
+        }
+
 
         render(context, deltaTime) {
             if (this.timer > this.interval){
@@ -470,7 +533,7 @@ window.addEventListener('load', () => {
                 // Draw the game objects
                 this.gameObjects.forEach((object) => {
                     object.draw(context);
-                    object.update();
+                    object.update(deltaTime);
                 })
 
                

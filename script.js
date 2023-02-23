@@ -3,7 +3,7 @@ window.addEventListener('load', () => {
     const canvas = document.getElementById('canvas1')
     const ctx = canvas.getContext('2d');
     canvas.width = 1280;
-    canvas.height = 720;
+    canvas.height = 710;
 
 
     ctx.fillStyle = 'white';
@@ -22,7 +22,7 @@ window.addEventListener('load', () => {
             this.dy = 0;
             this.speedModifier = 5;
             this.spriteWidth = 255;
-            this.spriteHeight = 255;
+            this.spriteHeight = 256;
             this.width = this.spriteWidth;
             this.height = this.spriteHeight;
             //  these two proeprties will defien the top left corner of the sprite image we are currently drawing to represent the player.
@@ -31,8 +31,7 @@ window.addEventListener('load', () => {
             this.frameX = 0;
             this.frameY = 0;
             this.image = document.getElementById('bull');
-
-
+            
         }
 
 
@@ -137,6 +136,7 @@ window.addEventListener('load', () => {
             this.spriteY = this.collisionY - (this.height/2) - 100;
 
 
+
             // horizontal boundaries
 
             if (this.collisionX < (0 + this.collisionRadius)) {
@@ -182,8 +182,12 @@ window.addEventListener('load', () => {
                 
             })
         }
+
+
     }
 
+
+   
 
     class Obstacle {
 
@@ -228,7 +232,138 @@ window.addEventListener('load', () => {
             }
             
         }
+
+        update() {
+
+
+        }
     }
+
+
+    class Egg {
+
+        constructor(game) {
+            this.game = game;
+            this.collisionRadius = 40;
+            this.margin = this.collisionRadius * 2;
+            this.collisionX = this.margin + (Math.random() * (this.game.width - (this.margin * 2)));
+            this.collisionY = this.game.topMargin + (Math.random() * (this.game.height - this.game.topMargin - this.margin));
+            this.image = document.getElementById('egg');
+            this.spriteWidth = 110;
+            this.spriteHeight = 135;
+            this.width = this.spriteWidth;
+            this.height = this.spriteHeight;
+            this.spriteX = this.collisionX - (this.width /2);
+            this.spriteY = this.collisionY - (this.height/2) - 30;
+            
+        }
+
+        draw(context) {
+
+
+            context.drawImage(this.image, this.spriteX, this.spriteY);
+            
+            if (this.game.debug) {
+                context.beginPath();
+                context.arc(this.collisionX, this.collisionY, this.collisionRadius, 0, Math.PI * 2);
+                context.save();
+                context.globalAlpha = 0.5;
+                context.fill();
+                context.restore();
+                context.stroke();
+            }
+        }
+
+        update() {
+            // spread operator allows us to quickly expand elements in an array into another array
+            let collisionObjects = [this.game.player, ...this.game.obstacles, ...this.game.enemies];
+
+            collisionObjects.forEach(object => {
+                let [collision, distance, sumOfRadii, dx, dy] = this.game.checkCollision(this, object);
+
+                if(collision) {
+                    const unit_x = dx/distance;
+                    const unit_y = dy / distance;
+                    this.collisionX = object.collisionX + (sumOfRadii + 1) * unit_x;
+                    this.collisionY = object.collisionY + (sumOfRadii + 1) * unit_y;
+                }
+
+            })
+
+            this.spriteX = this.collisionX - (this.width /2);
+            this.spriteY = this.collisionY - (this.height/2) - 30;
+
+        }
+    }
+
+
+    class Enemy {
+
+
+        constructor(game) {
+            this.game = game;
+            this.collisionRadius = 30;
+            this.speedX = Math.random() * 3 + 0.5;
+            this.image = document.getElementById('toad');
+            this.spriteWidth = 140;
+            this.spriteHeight = 260;
+            this.width = this.spriteWidth;
+            this.height = this.spriteHeight;
+            this.collisionX = this.game.width + this.width + Math.random() * this.game.width * 0.5;
+            this.collisionY = this.game.topMargin + (Math.random() * (this.game.height - this.game.topMargin));
+            this.spriteX;
+            this.spriteY;
+        }
+
+
+        draw(context) {
+            context.drawImage(this.image, this.spriteX, this.spriteY);
+
+            if (this.game.debug) {
+                context.beginPath();
+                context.arc(this.collisionX, this.collisionY, this.collisionRadius, 0, Math.PI * 2);
+                context.save();
+                context.globalAlpha = 0.5;
+                context.fill();
+                context.restore();
+                context.stroke();
+            }
+        }
+
+
+        update() {
+
+            this.spriteX = this.collisionX - this.spriteWidth/2;
+            this.spriteY = this.collisionY - (this.spriteHeight / 2) - 100;
+
+            this.collisionX -= this.speedX;
+
+            if(this.spriteX + this.width < 0){
+                this.collisionX = this.game.width + this.width + Math.random() * this.game.width * 0.5;
+                this.collisionY = this.collisionY = this.game.topMargin + (Math.random() * (this.game.height - this.game.topMargin));
+
+            }
+
+
+            let collisionObjects = [this.game.player, ...this.game.obstacles];
+
+            collisionObjects.forEach(object => {
+                let [collision, distance, sumOfRadii, dx, dy] = this.game.checkCollision(this, object);
+
+                if(collision) {
+                    const unit_x = dx/distance;
+                    const unit_y = dy / distance;
+                    this.collisionX = object.collisionX + (sumOfRadii + 1) * unit_x;
+                    this.collisionY = object.collisionY + (sumOfRadii + 1) * unit_y;
+                }
+
+            })
+        }
+
+
+    }
+
+
 
     // JS classes are hoisted but they are not initialised until the specific line is called
     class Game {
@@ -240,8 +375,17 @@ window.addEventListener('load', () => {
             this.topMargin = 260;
             this.debug = true;
             this.player = new Player(this); // this keyword refers to the entire object
+            this.fps = 70;
+            this.timer = 0;
+            this.interval = 1000/this.fps;
+            this.eggTimer = 0;
+            this.eggInterval = 1000;
             this.numberOfObstacles = 10;
             this.obstacles = [];
+            this.maxEggs = 20;
+            this.eggs = [];
+            this.enemies = [];
+            this.gameObjects = [];
             this.mouse = {
                 x: this.width * 0.5,
                 y: this.height * 0.5,
@@ -303,12 +447,56 @@ window.addEventListener('load', () => {
         }
 
 
-        render(context) {
-            this.obstacles.forEach((obstacle) => {
-                obstacle.draw(context);
-            })
-            this.player.draw(context);
-            this.player.update();
+        render(context, deltaTime) {
+            if (this.timer > this.interval){
+                // animate next frame
+           
+                // clears the old paint
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                
+                this.gameObjects = [...this.eggs, ...this.obstacles, this.player, ...this.enemies];
+
+
+                 // sort game objects by vertical position to determine draw order
+
+                // built in array sort function can take a compare function as an argument
+
+                this.gameObjects.sort((a, b) => {
+                    return a.collisionY - b.collisionY;
+
+                });
+
+                // Draw the game objects
+                this.gameObjects.forEach((object) => {
+                    object.draw(context);
+                    object.update();
+                })
+
+               
+
+
+                // this.obstacles.forEach((obstacle) => {
+                //     obstacle.draw(context);
+                // })
+                // this.player.draw(context);
+                // this.player.update();
+
+                this.timer = 0;
+
+            }
+            this.timer += deltaTime;
+
+
+            // add eggs periodically
+            if (this.eggTimer > this.eggInterval && this.eggs.length < this.maxEggs){
+                this.addEgg();
+                this.eggTimer = 0;
+                
+            } else {
+                this.eggTimer += deltaTime;
+            }
+
 
         }
 
@@ -321,11 +509,27 @@ window.addEventListener('load', () => {
             return [(distance < sumOfRadii), distance, sumOfRadii, dx, dy];
         }
 
+
+        addEgg() {
+            this.eggs.push(new Egg(this));
+        }
+
+        addEnenmy() {
+
+            this.enemies.push(new Enemy(this));
+        }
+
         init() {
             // for (let i = 0; i < this.numberOfObstacles; i++){
             //     this.obstacles.push(new Obstacle(this));
             // }
 
+
+            for (let i =0; i < 3; i++) {
+                this.addEnenmy();
+                
+
+            }
 
 
             // circle packing
@@ -368,18 +572,30 @@ window.addEventListener('load', () => {
    
 
 
+    // timestamp of last animation loop
+    let lastTime = 0;
+    function animate(timeStamp) {
+        
+        const deltaTime = timeStamp - lastTime;
+        lastTime = timeStamp;
+        
+        
+        game.render(ctx, deltaTime);
 
-
-    function animate() {
-        // clears the old paint
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        game.render(ctx);
         // creates an endless animation loop
         requestAnimationFrame(animate);
+
+        //  delta time - the amount of milliseconds that passed between each call of requestAnimationFrame
+        // only allow game to serve the next animation frame when a specific amount of milliseconds has passed
+
+        // requestAnimationFrame() will automatically try to adjust itself to the screen refresh rate, in most cases 60 frames per second
+        // it will automatically generate a timestamp and pass that timestamp to the function it calls, all we have to do is assign it a variable name
+
+        // deltaTime is the difference between the timestamp from this animation loop and the timestamp from the previous animation loop.
     }
 
-
-    animate();
+    // call with 0 to prevent NaN error when requestanimationframe first runs
+    animate(0);
 
 
 

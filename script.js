@@ -8,7 +8,7 @@ window.addEventListener('load', () => {
 
     ctx.fillStyle = 'white';
     ctx.lineWidth = 3;
-    ctx.strokeStyle = 'white';
+    ctx.strokeStyle = 'black';
     //  font is a part of canvas state, and frequent changes to canvas state can effect performance
 
     ctx.font = '40px Helvetica';
@@ -306,7 +306,7 @@ window.addEventListener('load', () => {
 
             // HATCHING
             
-            if(this.hatchTimer > this.hatchInterval) {
+            if(this.hatchTimer > this.hatchInterval || this.collisionY < this.game.topMargin) {
                 this.game.hatchlings.push(new Larva(this.game, this.collisionX, this.collisionY))
                 this.markedForDeletion = true;
                 this.game.removeGameObjects()
@@ -367,6 +367,11 @@ window.addEventListener('load', () => {
                 this.markedForDeletion = true;
                 this.game.removeGameObjects();
                 this.game.score++;
+
+                for (let i = 0; i < 3; i++) {
+                    this.game.particles.push(new Firefly(this.game, this.collisionX, this.collisionY, 'yellow'));
+                }
+                
             }
 
 
@@ -392,6 +397,10 @@ window.addEventListener('load', () => {
                     this.markedForDeletion = true;
                     this.game.removeGameObjects();
                     this.game.lostHatchlings ++;
+                    for (let i = 0; i < 5; i++) {
+                        this.game.particles.push(new Spark(this.game, this.collisionX, this.collisionY, 'blue'));
+                    }
+                    
 
 
                 }
@@ -408,7 +417,7 @@ window.addEventListener('load', () => {
             this.game = game;
             this.collisionRadius = 30;
             this.speedX = Math.random() * 3 + 0.5;
-            this.image = document.getElementById('toad');
+            this.image = document.getElementById('toads');
             this.spriteWidth = 140;
             this.spriteHeight = 260;
             this.width = this.spriteWidth;
@@ -417,11 +426,14 @@ window.addEventListener('load', () => {
             this.collisionY = this.game.topMargin + (Math.random() * (this.game.height - this.game.topMargin));
             this.spriteX;
             this.spriteY;
+            // navigate around the sprite sheet horizontally
+            this.frameX = 0;
+            this.frameY = Math.floor(Math.random() * 4);
         }
 
 
         draw(context) {
-            context.drawImage(this.image, this.spriteX, this.spriteY);
+            context.drawImage(this.image, this.frameX * this.spriteWidth, this.frameY * this.spriteHeight, this.spriteWidth, this.spriteHeight, this.spriteX, this.spriteY, this.width, this.height);
 
             if (this.game.debug) {
                 context.beginPath();
@@ -445,6 +457,7 @@ window.addEventListener('load', () => {
             if(this.spriteX + this.width < 0){
                 this.collisionX = this.game.width + this.width + Math.random() * this.game.width * 0.5;
                 this.collisionY = this.collisionY = this.game.topMargin + (Math.random() * (this.game.height - this.game.topMargin));
+                this.frameY = Math.floor(Math.random() * 4);
 
             }
 
@@ -469,6 +482,74 @@ window.addEventListener('load', () => {
 
 
 
+    // Object pooling - creating a collection of objects and only drawing them when you need them
+
+    class Particle {
+        constructor(game, x, y, color) {
+            this.game = game;
+            this.collisionX = x;
+            this.collisionY = y;
+            this.color = color;
+            this.radius = Math.floor(Math.random() * 10 + 5);
+            this.speedX = Math.random() * 6 - 3;
+            this.speedY = Math.random() * 2 + 0.5;
+            this.angle = 0;
+            this.va = Math.random() * 0.1 + 0.01;
+            this.markedForDeletion = false;
+        }
+
+        draw(context) {
+            context.save();
+            context.fillStyle = this.color;
+            context.beginPath();
+            // Math.PI * 2 is a value in radians and it converts to 360 degrees (full circle). We have to use values in radians when passing them to the arc method.
+            context.arc(this.collisionX, this.collisionY, this.radius, 0, Math.PI * 2);
+            context.fill();
+            context.stroke();
+            context.restore();
+        }
+
+    }
+
+
+    class Firefly extends Particle {
+
+        update() {
+            // va stands for angle velocity
+            this.angle += this.va;
+            this.collisionX += Math.cos(this.angle) * this.speedX;
+            this.collisionY -= this.speedY;
+
+            if (this.collisionY < 0 - this.radius) {
+                this.markedForDeletion = true;
+                this.game.removeGameObjects();
+            }
+        
+        }
+
+
+    }
+
+    class Spark extends Particle {
+
+        update() {
+
+            this.angle += this.va * 0.5;
+            this.collisionX -= Math.cos(this.angle) * this.speedX;
+            this.collisionY -= Math.sin(this.angle) * this.speedY;
+
+            if (this.radius > 0.1) this.radius -= 0.05;
+            if( this.radius < 0.2) {
+                this.markedForDeletion = true;
+                this.game.removeGameObjects();
+            }
+
+
+            
+        }
+    }
+
+
     // JS classes are hoisted but they are not initialised until the specific line is called
     class Game {
 
@@ -489,6 +570,7 @@ window.addEventListener('load', () => {
             this.maxEggs = 20;
             this.eggs = [];
             this.enemies = [];
+            this.particles = [];
             this.hatchlings = [];
             this.gameObjects = [];
             this.mouse = {
@@ -496,8 +578,10 @@ window.addEventListener('load', () => {
                 y: this.height * 0.5,
                 pressed: false
             }
+            this.winningScore = 5;
             this.lostHatchlings = 0;
             this.score = 0;
+            this.gameOver = false;
 
             // event listeners - make sure they are automatically applied when creating an instance of the game
 
@@ -570,6 +654,14 @@ window.addEventListener('load', () => {
                     return true;
                 }
             })
+
+
+            this.particles = this.particles.filter((particle) => {
+
+                if(!particle.markedForDeletion){
+                    return true;
+                }
+            })
         }
 
 
@@ -581,7 +673,7 @@ window.addEventListener('load', () => {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 
-                this.gameObjects = [...this.eggs, ...this.obstacles, this.player, ...this.enemies, ...this.hatchlings];
+                this.gameObjects = [...this.eggs, ...this.obstacles, this.player, ...this.enemies, ...this.hatchlings, ...this.particles];
 
 
                  // sort game objects by vertical position to determine draw order
@@ -626,12 +718,39 @@ window.addEventListener('load', () => {
             // draw status text
             context.save();
             context.textAlign = 'left';
-            context.fillText('Score', 25, 50);
+            context.fillText('Score: ' + this.score, 25, 50);
 
             if (this.debug) {
                 context.fillText('Lost: ' + this.lostHatchlings, 25, 100)
             }
             context.restore();
+
+
+            if (this.score >= this.winningScore) {
+                this.gameOver = true;
+                context.save();
+                context.fillStyle = 'rgba(0,0,0,0.5)';
+                context.fillRect(0, 0, this.width, this.height);
+                context.fillStyle = 'white';
+                context.textAlign = "center";
+                let message1, message2;
+                if (this.lostHatchlings <= 5) {
+                    // win
+                    message1 = "Bullseye!!!"
+                    message2 = "You bullied the bullies!"
+                } else {
+                    // lose
+                    message1 = "Bollocks!";
+                    message2 = "You lost " + this.lostHatchlings + "hatlings, don't be a pushover!";
+
+                }
+                context.font = "130px Helvetica";
+                context.fillText(message1, this.width * 0.5, this.height * 0.5 - 20);
+                context.font = "40px Helvetica";
+                context.fillText(message2, this.width * 0.5, this.height * 0.5 + 30);
+                context.fillText("Final score " + this.score + ". Press 'R' to butt heads again!", this.width * 0.5, this.height * 0.5 + 80);
+                context.restore();
+            }
 
         }
 
@@ -718,8 +837,9 @@ window.addEventListener('load', () => {
         game.render(ctx, deltaTime);
 
         // creates an endless animation loop
+        
         requestAnimationFrame(animate);
-
+        
         //  delta time - the amount of milliseconds that passed between each call of requestAnimationFrame
         // only allow game to serve the next animation frame when a specific amount of milliseconds has passed
 

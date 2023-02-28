@@ -31,3 +31,8 @@
 #obstacles, #bull, #egg, #toad, #larva, #toads{
     display: none;
 }
+
+
+h1, h2 {
+    text-align: center;
+}

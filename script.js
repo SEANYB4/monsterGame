@@ -6,6 +6,12 @@ window.addEventListener('load', () => {
     canvas.height = 710;
 
 
+    // AUDIO
+    const music = document.createElement("audio");
+    music.src = "forest_beasts.mp3";
+    
+
+
     ctx.fillStyle = 'white';
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'black';
@@ -568,7 +574,7 @@ window.addEventListener('load', () => {
             this.width = this.canvas.width;
             this.height = this.canvas.height;
             this.topMargin = 260;
-            this.debug = true;
+            this.debug = false;
             this.player = new Player(this); // this keyword refers to the entire object
             this.fps = 70;
             this.timer = 0;
@@ -814,6 +820,9 @@ window.addEventListener('load', () => {
             //     this.obstacles.push(new Obstacle(this));
             // }
 
+
+            // AUDIO
+            music.play();
 
             for (let i =0; i < 3; i++) {
                 this.addEnenmy();
